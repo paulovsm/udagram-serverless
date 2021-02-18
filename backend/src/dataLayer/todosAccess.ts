@@ -108,4 +108,22 @@ export default class TodosAccess {
         }
     }).promise();
   }
+
+  async getBatchItems(items){
+    logger.info('Get batch to-dos', { items: items })
+
+    const itemsId = items.map( (todo) => { return {todoId: todo.todoId} })
+
+    const result = await this.docClient.batchGet({
+        RequestItems: {
+            [this.todosTable]: {
+            Keys: itemsId,
+          }
+        }
+      }).promise();
+
+      logger.info('Returned to-dos', { result: result})
+
+      return result
+  }
 }

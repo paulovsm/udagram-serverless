@@ -2,6 +2,7 @@ import 'source-map-support/register';
 import * as uuid from 'uuid';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import TodosAccess from '../dataLayer/todosAccess';
+import TodosES from '../dataLayer/todosES';
 import TodosStorage from '../dataLayer/todosStorage';
 import { getUserId } from '../lambda/utils';
 import { CreateTodoRequest } from '../requests/CreateTodoRequest';
@@ -12,6 +13,7 @@ import { createLogger } from '../utils/logger'
 
 const todosAccess = new TodosAccess();
 const todosStorage = new TodosStorage();
+const todosES = new TodosES();
 const logger = createLogger('todosBusinessLogic')
 
 export async function createTodo(event: APIGatewayProxyEvent, createTodoRequest: CreateTodoRequest): Promise<TodoItem> {
@@ -109,4 +111,24 @@ export async function generateUploadUrl(event: APIGatewayProxyEvent): Promise<st
     logger.info('Generate upload url', {bucketName: bucketName, todoId: todoId} )
 
     return await todosStorage.getSignedUploadURL(createSignedUrlRequest);
+}
+
+export async function fullTextSearch(event: APIGatewayProxyEvent) {
+    const queryString = event.queryStringParameters? event.queryStringParameters.q : "";
+
+    logger.info('Full text search', {queryString: queryString} )
+
+    const matchedItems: Array<any> = await todosES.search(queryString)
+
+    if (!matchedItems || matchedItems.length == 0) {
+        return []
+    }
+
+    var result = []
+
+    for (const item of matchedItems) {
+        result.push(await todosAccess.getTodoFromDB(item.todoId, item.userId))
+    }
+
+    return result;
 }
