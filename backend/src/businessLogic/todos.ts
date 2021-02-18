@@ -4,14 +4,15 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import TodosAccess from '../dataLayer/todosAccess';
 import TodosStorage from '../dataLayer/todosStorage';
 import { getUserId } from '../lambda/utils';
-import { CreateTodoRequest } from '../requests/CreateTodoTodoRequest';
+import { CreateTodoRequest } from '../requests/CreateTodoRequest';
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest';
+import { CreateSignedURLRequest } from '../requests/CreateSignedURLRequest';
 import { TodoItem } from '../models/TodoItem';
 import { createLogger } from '../utils/logger'
 
 const todosAccess = new TodosAccess();
 const todosStorage = new TodosStorage();
-const logger = createLogger('todosAccess')
+const logger = createLogger('todosBusinessLogic')
 
 export async function createTodo(event: APIGatewayProxyEvent, createTodoRequest: CreateTodoRequest): Promise<TodoItem> {
     const todoId = uuid.v4();
@@ -75,18 +76,22 @@ export async function updateTodo(event: APIGatewayProxyEvent,
     const todoId = event.pathParameters.todoId;
     const userId = getUserId(event);
 
-    const todoExist = await todosAccess.getTodoFromDB(todoId, userId)
+    const todoItem = await todosAccess.getTodoFromDB(todoId, userId)
 
-    if (!todoExist) {
+    if (!todoItem) {
         logger.warn('To-do not found', {userId: userId, todoId: todoId} )
-        return false;
+        return null;
     }
 
     logger.info('Update to-do', {userId: userId, todoId: todoId} )
 
     await todosAccess.updateTodoInDB(todoId, userId, updateTodoRequest);
 
-    return true;
+    todoItem.name = updateTodoRequest.name
+    todoItem.dueDate = updateTodoRequest.dueDate
+    todoItem.done = updateTodoRequest.done
+
+    return todoItem;
 }
 
 export async function generateUploadUrl(event: APIGatewayProxyEvent): Promise<string> {
@@ -94,7 +99,7 @@ export async function generateUploadUrl(event: APIGatewayProxyEvent): Promise<st
     const urlExpiration = process.env.SIGNED_URL_EXPIRATION;
     const todoId = event.pathParameters.todoId;
 
-    const createSignedUrlRequest = {
+    const createSignedUrlRequest: CreateSignedURLRequest = {
         Bucket: bucketName,
         Key: todoId,
         Expires: parseInt(urlExpiration)

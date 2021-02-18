@@ -5,7 +5,7 @@ import { createLogger } from '../utils/logger'
 import * as AWSXRay from 'aws-xray-sdk';
 const XAWS = AWSXRay.captureAWS(AWS);
 
-const logger = createLogger('todosAccess')
+const logger = createLogger('todosStorage')
 
 export default class TodosStorage {
     constructor(
