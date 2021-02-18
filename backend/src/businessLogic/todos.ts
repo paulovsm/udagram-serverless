@@ -65,10 +65,11 @@ export async function getTodo(event: APIGatewayProxyEvent) {
 
 export async function getTodos(event: APIGatewayProxyEvent) {
     const userId = getUserId(event);
+    const orderBy = event.queryStringParameters? event.queryStringParameters.orderBy || "createdAt" : "createdAt";
 
-    logger.info('Get all To-dos', {userId: userId} )
+    logger.info('Get all To-dos', {userId: userId, orderBy: orderBy} )
 
-    return await todosAccess.getAllTodosFromDB(userId);
+    return await todosAccess.getAllTodosFromDB(userId, orderBy);
 }
 
 export async function updateTodo(event: APIGatewayProxyEvent,
